@@ -23,13 +23,20 @@ Inspired by Gisty (http://github.com/swdyh/gisty).
 
 import os
 import sys
-from commands import getoutput as cmd
-
 from clint import args
 from clint.textui import puts, colored, indent
 import requests
 import json
 from github2.client import Github
+
+try:
+    # check_output is new in 2.7.
+    from subprocess import check_output
+    def cmd(command):
+        return check_output(command, shell=True).strip()
+except ImportError:
+    # commands is deprecated and doesn't work on Windows
+    from commands import getoutput as cmd
 
 
 __author__ = 'Kenneth Reitz'
@@ -50,6 +57,7 @@ def run():
     # cli flags
     upstream_on = args.flags.contains('--upstream')
     only_type = args.grouped.get('--only', False)
+    organization = args[0]
 
     os.chdir(GHSYNC_DIR)
 
@@ -60,14 +68,15 @@ def run():
     # repo slots
     repos = {}
 
-    repos['watched'] = [r for r in github.repos.watching(GITHUB_USER)]
+    if not organization:
+        repos['watched'] = [r for r in github.repos.watching(GITHUB_USER)]
     repos['private'] = []
     repos['mirrors'] = []
     repos['public'] = []
     repos['forks'] = []
 
     # Collect GitHub repos via API
-    for repo in github.repos.list():
+    for repo in github.repos.list(organization):
 
         if repo.private:
             repos['private'].append(repo)
